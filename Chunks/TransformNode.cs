@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Text;
 
 namespace CsharpVoxReader.Chunks
 {
@@ -18,7 +19,17 @@ namespace CsharpVoxReader.Chunks
             int readSize = base.Read(br, loader);
 
             Int32 id = br.ReadInt32();
-            Dictionary<string, byte[]> attributes = GenericsReader.ReadDict(br, ref readSize);
+            var sd = GenericsReader.ReadDict(br, ref readSize);
+            var attributes = new Dictionary<string, object>();
+            if (sd.TryGetValue("_name", out var v))
+            {
+                attributes.Add("_name", Encoding.UTF8.GetString(v));
+            }
+
+            if (sd.TryGetValue("_hidden", out v))
+            {
+                attributes.Add("_hidden", v[0] == '1');
+            }
 
             Int32 childNodeId = br.ReadInt32();
             Int32 reservedId = br.ReadInt32();
@@ -27,20 +38,25 @@ namespace CsharpVoxReader.Chunks
 
             readSize += sizeof(Int32) * 5;
 
-            Dictionary<string, byte[]>[] framesAttributes = new Dictionary<string, byte[]>[numOfFrames];
+            var framesAttributes = new Dictionary<string, object>[numOfFrames];
 
             for (int fnum=0; fnum < numOfFrames; fnum++) {
-              framesAttributes[fnum] = GenericsReader.ReadDict(br, ref readSize);
-              /*int[] rotationMatrix = GenericsReader.ReadRotation(br, ref readSize);
-              int[] translationVector = { 0, 0, 0 };
-              translationVector[0] = br.ReadInt32();
-              translationVector[1] = br.ReadInt32();
-              translationVector[2] = br.ReadInt32();*/
-              // TODO: Add frame info
+              sd = GenericsReader.ReadDict(br, ref readSize);
+              var gd = new Dictionary<string, object>();
+              if (sd.TryGetValue("_t", out v))
+              {
+                  gd.Add("_t", GenericsReader.ReadTranslation(v));
+              }
+
+              if (sd.TryGetValue("_r", out v))
+              {
+                  gd.Add("_r", GenericsReader.ReadRotation(v));
+              }
+
+              framesAttributes[fnum] = gd;
             }
 
-            // TODO: Notify the IVoxLoader of the transform node
-            loader.NewTransformNode(id, childNodeId, layerId, framesAttributes);
+            loader.NewTransformNode(id, childNodeId, layerId, attributes, framesAttributes);
             return readSize;
         }
     }
