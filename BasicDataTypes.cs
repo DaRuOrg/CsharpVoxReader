@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using UnityEngine;
 
 namespace CsharpVoxReader
 {
@@ -38,5 +40,26 @@ namespace CsharpVoxReader
         public Vector3 ColZ => new Vector3(RowX.Z, RowY.Z, RowZ.Z);
         
         public static Matrix3x3 Identity => new Matrix3x3(new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1));
+
+        public Matrix4x4 ToMatrix4x4()
+        {
+            var r = Matrix4x4.identity;
+            r.m00 = RowX.X;    r.m01 = RowX.Y;    r.m02 = RowX.Z;        
+            r.m10 = RowY.X;    r.m11 = RowY.Y;    r.m12 = RowY.Z;        
+            r.m20 = RowZ.X;    r.m21 = RowZ.Y;    r.m22 = RowZ.Z;        
+            r = r.transpose;
+
+            var q = r.rotation;
+            q = new Quaternion(q.x, q.z, q.y, q.w);
+            
+            var m = Matrix4x4.Rotate(q);
+
+            for (int i = 0; i < 16; i++)
+            {
+                m[i] = (float)Math.Round(m[i]);
+            }
+
+            return m;
+        }
     }
 }
